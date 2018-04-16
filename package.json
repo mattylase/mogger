@@ -1,0 +1,14 @@
+{
+  "name": "mogger",
+  "version": "1.0.0",
+  "description": "Create a mock file from a response!",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Matt Laser",
+  "license": "ISC",
+  "dependencies": {
+    "requestify": "^0.2.5"
+  }
+}
