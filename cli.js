@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
-var http = require('http')
-var requestify = require('requestify')
-var fs = require('fs')
+const http = require('http')
+const requestify = require('requestify')
+const fs = require('fs')
+const conf = require('./mogger.conf')
+
 
 const [, , ...args] = process.argv
-const acceptedArguments = ['--url', '--cookie', '--requestMethod', '--className', '--saveLocation', '--ext']
+const acceptedArguments = ['--url', '--cookie', '--request-method', '--class-name', '--save-location', '--ext']
 let url, className, cookie, saveLocation, ext = 'ts', requestMethod = 'get'
 
 args.forEach((value) => {
@@ -13,29 +15,34 @@ args.forEach((value) => {
 })
 
 if (requestMethod === 'get') {
-  requestify.get(url, {
-    cookies: {
-      'medcompass-cookie-auth': 'cookie value'
-    }
-  })
-    .then(response => {
+  requestify.get(url, conf.cookie).then(response => {
       exportResponse(response.body)
   }).catch(e => {
-    console.log(e)
+    console.error(e)
+  })
+} else if (requestMethod === 'post') {
+  requestify.post(url, conf.body, conf.cookie).then(response => {
+      exportResponse(response.body)
+  }).catch(e => {
+    console.error(e)
   })
 }
 
 // Parse the actual command line arguments
 function parseArgument(rawArgument) {
   const parts = rawArgument.split("=")
-  console.log(parts)
   const arg = parts[0]
+  if (parts.length > 2) {
+    for (var i = 2; i < parts.length; i++) {
+      parts[1] += '=' + parts[i]
+    }
+  }
   const value = parts[1]
   if (acceptedArguments.includes(parts[0])) {
     url = '--url' === arg ? value : url 
-    requestMethod = '--requestMethod' === arg ? value : requestMethod 
-    className = '--className' === arg ? value : className 
-    saveLocation = '--saveLocation' === arg ? value : saveLocation 
+    requestMethod = '--request-method' === arg ? value : requestMethod 
+    className = '--class-name' === arg ? value : className 
+    saveLocation = '--save-location' === arg ? value : saveLocation 
     ext = '--ext' === arg ? value : ext 
     cookie = '--cookie' === arg ? value : cookie 
   } else {
@@ -59,7 +66,6 @@ function exportResponse(body) {
 
   const fileContents = heading + cleanedBody + ending
   const fullyQualifiedPath = saveLocation + '/' + className + '.' + ext 
-  console.log(fullyQualifiedPath)
   fs.writeFileSync(fullyQualifiedPath, fileContents)
 }
 
@@ -67,6 +73,8 @@ function cleanBodyString(body) {
   let cleanedBody = ''
 
   const bodyParts = body.split(/,/)
+
+
   bodyParts.forEach(part => {
     if (part.trim() !== '}' || part.trim() !== '{') {
       const keyValue = part.split(':')
@@ -74,6 +82,7 @@ function cleanBodyString(body) {
         cleanedBody += `${keyValue[0]},\n`
       } else {
         keyValue[0] = keyValue[0].replace(/"/g, '')
+        keyValue[0] = keyValue[0].trim()
         if (keyValue.length > 2) {
           for (var i = 2; i < keyValue.length; i++) {
             keyValue[1] += `:${keyValue[i]}`
